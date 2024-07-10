@@ -5,6 +5,7 @@ import './App.css'
 import ColorDetection from './Color-detection/ColorDetection'
 import ShortestPath from './ShortestPath/ShortestPath'
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import SpanningTree from './SpanningTree/SpanningTree'
 
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
       <Routes>
         <Route path="/" element={<ColorDetection />} />
         <Route path="shortest_path" element={<ShortestPath />} />
+        <Route exact path="/spanning" element={<SpanningTree/>}/>
         <Route path="*" element={<ColorDetection />} />
       </Routes>
     </BrowserRouter>

@@ -1,7 +1,9 @@
 import * as React from "react";
+import { HexColorPicker } from "react-colorful";
 import { Grid, Button, Slider, Typography, Tooltip } from "@mui/material";
 import Graph from "react-graph-vis";
-import "./ShortestPath.css";
+import "./SpanningTree.css";
+import { v4 as uuidv4 } from "uuid";
 
 let size = 1000;
 let mutationPr = 0.1;
@@ -10,9 +12,6 @@ let goal = 0;
 let arr = [];
 
 let arrGraphs = [];
-let arrWalks = [];
-let a = 0;
-let b = 4;
 
 let graph = [
   [0, 2, 20, 4, 0, 7],
@@ -29,23 +28,11 @@ let graphTri = [
   [0, 4, 11],
   [0, 6],
 ];
-const randomWalker = (from, to) => {
-  let currentWlk = from;
-  let rndIns = Math.floor(Math.random() * (graph[currentWlk].length - 2));
-  let walk = [from];
-  for (let i = 0; i < rndIns; i++)
-    walk.push(Math.floor(Math.random() * graph[currentWlk].length));
-  walk.push(to);
-  return walk;
-};
-
-for (let i = 0; i < size; i++) arrWalks.push(randomWalker(a, b));
 
 let fullEdges = [];
 let iter = 0;
 for (let i = 0; i < graphTri.length; i++) {
   for (let j = 0; j < graphTri[i].length; j++) {
-    //console.log("rndTreeEdge" + (iter + j))
     if (graphTri[i][j] != 0)
       fullEdges.push({
         id: "rndTreeEdge" + (i * iter + j),
@@ -78,35 +65,33 @@ const options = {
 };
 
 for (let i = 0; i < size; i++) {
-  let auxGr = [a];
-  let mutIdx = 1 + Math.floor(Math.random() * (graph.length - 2));
-  let length = 2 + Math.floor(Math.random() * (graph.length - 2));
-
-  for (let j = 0; j < length; j++) {
-    let rndAux;
-    do {
-      rndAux = Math.floor(Math.random() * graph.length);
-    } while (rndAux === a || rndAux === b);
-    auxGr.push(rndAux);
-  }
-
-  auxGr.push(b);
-  arr.push(auxGr);
-
+  let auxGr = [];
+  arr.push(
+    graphTri.map((elem, idx) => {
+      let ran = Math.floor(Math.random() * graphTri[idx].length);
+      while (elem[ran] == 0) {
+        ran = Math.floor(Math.random() * graphTri[idx].length);
+      }
+      auxGr.push(ran + idx);
+      return elem[ran];
+    })
+  );
   arrGraphs.push(auxGr);
 }
 
-export default function ShortestPath() {
+export default function SpanningTree() {
   //const [goal, setGoal] = React.useState("#000000");
   const [network, setNetwork] = React.useState();
   const [generation, setGeneration] = React.useState([...arr]);
   const [graphGeneration, setGraphGeneration] = React.useState([...arrGraphs]);
-  const [shownIdx, setShownIdx] = React.useState(-1);
+  const [isShown, setIsShown] = React.useState(arr.map(() => false));
   const [mutationProb, setMutationProb] = React.useState(mutationPr);
   const [best, setBest] = React.useState(999999999);
   const [fullGraphViz, setFullGraphViz] = React.useState({ ...fullGraph });
-  const handleHover = ( idx) => {
-    setShownIdx(idx);
+  const handleHover = (value, idx) => {
+    let arr = [...isShown];
+    arr[idx] = value;
+    setIsShown([...arr]);
   };
   let globalGeneration = generation;
   let globalGraphGeneration = graphGeneration;
@@ -123,18 +108,11 @@ export default function ShortestPath() {
     }
 
     for (let i = 0; i < globalGraphGeneration.length; i++) {
-      for (let j = 0; j < globalGraphGeneration[i].length - 1; j++) {
-        if (
-          graph[globalGraphGeneration[i][j]][
-            globalGraphGeneration[i][j + 1]
-          ] !== 0
-        ) {
-          auxAdjMat[j][globalGraphGeneration[i][j]]++;
-          auxAdjMat[globalGraphGeneration[i][j]][j]++;
-        }
+      for (let j = 0; j < globalGraphGeneration[i].length; j++) {
+        auxAdjMat[j][globalGraphGeneration[i][j]]++;
+        auxAdjMat[globalGraphGeneration[i][j]][j]++;
       }
     }
-
     let sum = 0;
     for (let i = 0; i < auxAdjMat.length; i++)
       for (let j = 0; j < auxAdjMat[i].length; j++) sum += auxAdjMat[i][j];
@@ -174,20 +152,63 @@ export default function ShortestPath() {
     setGeneration([...globalGeneration]);
     setGraphGeneration([...globalGraphGeneration]);
   };
+  const initGraph = (maxVertice) => {
+    visited = new Array(maxVertice);
+    stack = [];
 
+    for (let i = 0; i < visited.length; i++) {
+      visited[i] = false;
+    }
+    graphAdj = new Array(maxVertice);
+    for (let i = 0; i < graphAdj.length; i++) {
+      graphAdj[i] = new Array(maxVertice);
+    }
+    for (let i = 0; i < graphAdj.length; i++) {
+      for (let j = 0; j < graphAdj[i].length; j++) {
+        graphAdj[i][j] = 0;
+      }
+    }
+  };
+
+  const isTraversal = (node) => {
+    stack.push(node);
+    while (stack.length !== 0) {
+      node = stack.pop();
+      if (visited[node] === false) {
+        visited[node] = true;
+        for (let j = 0; j < graphAdj[node].length; j++) {
+          if (graphAdj[node][j] === 1) {
+            stack.push(j);
+          }
+        }
+      }
+    }
+    let cnt = 0;
+    for (let i = 0; i < visited.length; i++) {
+      if (visited[i]) cnt++;
+    }
+    //console.log(cnt === graphAdj.length);
+    return cnt === graphAdj.length;
+  };
   const handleMutChange = (event, newVal) => {
     setMutationProb(newVal);
   };
-  const fitnessAlg = () => {
+
+  const fitnessCalc2 = () => {
     let fit = [];
 
     for (let i = 0; i < size; i++) {
+      initGraph(graphTri.length + 1);
+      for (let j = 0; j < globalGraphGeneration[i].length; j++) {
+        //console.log(globalGraphGeneration[i][j]);
+        graphAdj[j][globalGraphGeneration[i][j]] = 1;
+        graphAdj[globalGraphGeneration[i][j]][j] = 1;
+      }
+
       let sum = 0;
-      //console.log(globalGeneration[i]);
-      for (let j = 0; j < globalGeneration[i].length - 1; j++) {
-        if (graph[globalGeneration[i][j]][globalGeneration[i][j + 1]] === 0)
-          sum += 99999;
-        else sum += graph[globalGeneration[i][j]][globalGeneration[i][j + 1]];
+      if (!isTraversal(0)) sum += 999999;
+      for (let j = 0; j < globalGeneration[i].length; j++) {
+        sum += globalGeneration[i][j];
       }
       fit.push(sum);
     }
@@ -196,6 +217,7 @@ export default function ShortestPath() {
       list.push({
         gen: globalGeneration[j],
         fit: fit[j],
+        gen2: globalGraphGeneration[j],
       });
 
     list.sort(function (a, b) {
@@ -203,74 +225,108 @@ export default function ShortestPath() {
     });
 
     let genArr = [];
+    let genGraphArr = [];
 
     for (let k = 0; k < list.length; k++) {
       genArr.push(list[k].gen);
+      genGraphArr.push(list[k].gen2);
     }
     globalGeneration = [...genArr];
-    return list;
-  };
-  const fitnessCalc2 = () => {
-    let list = fitnessAlg();
+    globalGraphGeneration = [...genGraphArr];
+
     setBest(list[0].fit);
     calcAvg();
   };
 
   const mutation = () => {
     let newGen = [];
-    //globalGeneration.forEach((elem) => console.log(elem[elem.length - 1]));
-
-    let counterGen = graph.map(() => 0);
+    let newGraphGen = [];
     for (let i = 0; i < size; i++) {
-      newGen.push([...globalGeneration[i]]);
-      let auxTest = [...globalGeneration[i]];
-      if (newGen[i][0] !== 0 || newGen[i][newGen[i].length - 1] !== 4)
-        console.log("Init:", newGen[i]);
       if (Math.random() < mutationProb) {
-        if (newGen[i].length > 2) {
-          if (Math.random() < 0.5) {
-            let mutIdx = 1 + Math.floor(Math.random() * (newGen[i].length - 3));
-            counterGen[mutIdx]++;
-            newGen[i].splice(mutIdx, 1);
-          } else {
-            let mutIdx = 1 + Math.floor(Math.random() * (newGen[i].length - 3));
-            counterGen[mutIdx]++;
-            let rndAux;
-            do {
-              rndAux = Math.floor(Math.random() * graph.length);
-            } while (rndAux === a || rndAux === b);
-            newGen[i][mutIdx] = rndAux;
-          }
+        let mutIdx = Math.floor(Math.random() * globalGeneration[i].length);
+        let aux = [...globalGeneration[i]];
+        let aux2 = [...globalGraphGeneration[i]];
+        let ran = Math.floor(Math.random() * graph[mutIdx].length);
+        while (graph[mutIdx][ran] === 0) {
+          ran = Math.floor(Math.random() * graph[mutIdx].length);
         }
+        aux[mutIdx] = graph[mutIdx][ran];
+        aux2[mutIdx] = ran;
+        newGen.push(aux);
+        newGraphGen.push(aux2);
+      } else {
+        newGen.push(globalGeneration[i]);
+        newGraphGen.push(globalGraphGeneration[i]);
       }
-      if (newGen[i][0] !== 0 || newGen[i][newGen[i].length - 1] !== 4)
-        console.log("Gen:", auxTest, "End:", newGen[i]);
     }
-
     globalGeneration = newGen;
+    globalGraphGeneration = newGraphGen;
 
-    //globalGeneration.forEach((elem) => console.log(elem[elem.length - 1]));
     fitnessCalc2();
   };
   const crossover = () => {
     let newGen = [];
-
+    let newGraphGen = [];
     for (let i = 0; i < size - 1; i += 2) {
       let len = globalGeneration[i].length;
-      let len2 = globalGeneration[i + 1].length;
       newGen.push(
         globalGeneration[i]
           .slice(0, Math.ceil(len / 2))
-          .concat(globalGeneration[i + 1].slice(Math.ceil(len2 / 2), len2))
+          .concat(globalGeneration[i].slice(Math.ceil(len / 2), len))
+      );
+      newGraphGen.push(
+        globalGraphGeneration[i]
+          .slice(0, Math.ceil(len / 2))
+          .concat(globalGraphGeneration[i].slice(Math.ceil(len / 2), len))
       );
     }
     globalGeneration = [...globalGeneration.slice(0, 500).concat(newGen)];
+    globalGraphGeneration = [
+      ...globalGraphGeneration.slice(0, 500).concat(newGraphGen),
+    ];
 
     mutation();
   };
 
   const fitnessCalc = () => {
-    fitnessAlg();
+    let fit = [];
+    for (let i = 0; i < size; i++) {
+      initGraph(graphTri.length + 1);
+      for (let j = 0; j < globalGraphGeneration[i].length; j++) {
+        graphAdj[j][globalGraphGeneration[i][j]] = 1;
+        graphAdj[globalGraphGeneration[i][j]][j] = 1;
+      }
+
+      let sum = 0;
+
+      if (!isTraversal(0)) sum += 999999;
+      //if (i == 0) console.log(graphAdj);
+      for (let j = 0; j < globalGeneration[i].length; j++) {
+        sum += globalGeneration[i][j];
+      }
+      fit.push(sum);
+    }
+    var list = [];
+    for (let j = 0; j < size; j++)
+      list.push({
+        gen: globalGeneration[j],
+        fit: fit[j],
+        gen2: globalGraphGeneration[j],
+      });
+
+    list.sort(function (a, b) {
+      return a.fit < b.fit ? -1 : a.fit == b.fit ? 0 : 1;
+    });
+
+    let genArr = [];
+    let genGraphArr = [];
+
+    for (let k = 0; k < list.length; k++) {
+      genArr.push(list[k].gen);
+      genGraphArr.push(list[k].gen2);
+    }
+    globalGeneration = [...genArr];
+    globalGraphGeneration = [...genGraphArr];
     crossover();
   };
 
@@ -332,7 +388,7 @@ export default function ShortestPath() {
                 id="discrete-slider-always"
                 gutterBottom
               >
-                Best Fit: {generation[0].map((elem) => `${elem} `)}
+                Best Fit: {generation[0]}
               </Typography>
               <Typography
                 style={{ color: "white" }}
@@ -351,11 +407,12 @@ export default function ShortestPath() {
             <div
               style={{ backgroundColor: color }}
               className="gen-node"
-              onMouseEnter={() => handleHover(idx)}
+              onMouseOver={() => handleHover(true, idx)}
+              onMouseOut={() => handleHover(false, idx)}
             >
-              {color.reduce((a, b) => a + b)}
+              {color[0] + color[1] + color[2] + color[3] + color[4]}
             </div>
-            {idx === shownIdx && (
+            {isShown[idx] && (
               <div className="preview">
                 <Graph
                   graph={{
