@@ -1,6 +1,6 @@
 import { HexColorPicker } from 'react-colorful';
 import * as React from 'react';
-import { Grid, Button, Slider, Typography } from '@material-ui/core';
+import { Grid, Button, Slider, Typography } from '@mui/material';
 import './ColorDetection.css';
 
 let size = 1000;
