@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Grid, Button, Slider, Typography, Tooltip } from "@mui/material";
-import Graph from "graphviz-react";
+import Graph from "react-graph-vis";
 import "./ShortestPath.css";
 
 let size = 1000;
