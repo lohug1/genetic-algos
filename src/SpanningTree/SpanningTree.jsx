@@ -84,14 +84,12 @@ export default function SpanningTree() {
   const [network, setNetwork] = React.useState();
   const [generation, setGeneration] = React.useState([...arr]);
   const [graphGeneration, setGraphGeneration] = React.useState([...arrGraphs]);
-  const [isShown, setIsShown] = React.useState(arr.map(() => false));
+  const [shownIdx, setShownIdx] = React.useState(-1);
   const [mutationProb, setMutationProb] = React.useState(mutationPr);
   const [best, setBest] = React.useState(999999999);
   const [fullGraphViz, setFullGraphViz] = React.useState({ ...fullGraph });
-  const handleHover = (value, idx) => {
-    let arr = [...isShown];
-    arr[idx] = value;
-    setIsShown([...arr]);
+  const handleHover = (idx) => {
+    setShownIdx(idx);
   };
   let globalGeneration = generation;
   let globalGraphGeneration = graphGeneration;
@@ -407,12 +405,11 @@ export default function SpanningTree() {
             <div
               style={{ backgroundColor: color }}
               className="gen-node"
-              onMouseOver={() => handleHover(true, idx)}
-              onMouseOut={() => handleHover(false, idx)}
+              onMouseOver={() => handleHover(idx)}
             >
               {color[0] + color[1] + color[2] + color[3] + color[4]}
             </div>
-            {isShown[idx] && (
+            {shownIdx === idx && (
               <div className="preview">
                 <Graph
                   graph={{
