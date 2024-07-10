@@ -1,7 +1,6 @@
 import * as React from "react";
-import { HexColorInput, HexColorPicker } from "react-colorful";
-import { Grid, Button, Slider, Typography, Tooltip } from "@material-ui/core";
-import Graph from "react-graph-vis";
+import { Grid, Button, Slider, Typography, Tooltip } from "@mui/material";
+import Graph from "graphviz-react";
 import "./ShortestPath.css";
 
 let size = 1000;
